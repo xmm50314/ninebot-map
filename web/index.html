@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Along</title>
+<script src="./startup.js"></script>
+<link rel="modulepreload" href="./model.mjs">
+<link rel="modulepreload" href="./place-geography.mjs">
+<link rel="modulepreload" href="./vendor/gcoord/gcoord.mjs">
+<link rel="modulepreload" href="./map-layer.mjs">
+<link rel="modulepreload" href="./icons.mjs">
+<link rel="modulepreload" href="./wheel-zoom.mjs">
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="./vendor/leaflet/leaflet.css"><link rel="stylesheet" href="./styles.css">
+<script src="./vendor/leaflet/leaflet.js" defer></script><script type="module" src="./app.mjs"></script>
+</head>
+<body>
+<header class="topbar">
+  <nav class="activity-nav" aria-label="运动"><span aria-current="page">Riding</span><span class="activity-divider" aria-hidden="true">｜</span><button id="running" type="button">Running</button></nav>
+  <span id="local-status" class="visually-hidden" role="status" aria-live="polite">正在读取数据</span>
+  <div class="actions">
+    <details id="theme-options"><summary id="theme-toggle" aria-label="外观，跟随系统" title="外观，跟随系统"></summary><div class="theme-menu" role="group" aria-label="外观"><button type="button" data-theme-preference="system" aria-pressed="true">跟随系统</button><button type="button" data-theme-preference="light" aria-pressed="false">浅色</button><button type="button" data-theme-preference="dark" aria-pressed="false">深色</button></div></details>
+    <button id="toggle-places" aria-expanded="false" aria-controls="places-panel">常去地点</button>
+  </div>
+</header>
+<main id="workspace">
+  <div id="map" aria-label="骑行轨迹地图" tabindex="0"></div>
+  <section class="toolbar" aria-label="数据更新">
+    <button id="update-map" type="button" disabled title="正在检查更新服务">更新</button><time id="updated-at"></time><span id="nature-total" aria-label="出门放风感受自然，正在读取停车停留数据"></span><span id="badminton-stat" title="所有含 🏸 的命名地点按骑行日去重，同日多处或返回只计一次"></span><span id="update-status" role="status" aria-live="polite">正在加载路线…</span>
+  </section>
+  <aside id="places-panel" aria-label="常去地点">
+    <div class="panel-heading"><div><h2>常去地点</h2><span id="place-total">0 处</span></div><button id="close-places" type="button">关闭</button></div>
+    <ol id="places"></ol><p id="places-empty">数据就绪后显示常去地点。</p>
+    <section class="place-detail" aria-label="所选地点" hidden>
+      <p id="selection-empty">选择地点，查看相关路线。</p>
+      <div id="selection-summary" hidden><div class="selection-heading"><strong id="selection-name"></strong><button id="clear-selection" type="button" class="text-button">取消选择</button></div><p id="selection-count"></p><div class="detail-actions"><button id="locate-place" type="button">在地图中定位</button><button id="edit-place" type="button">命名</button><button id="merge-place" type="button">合并地点</button></div></div>
+      <form id="label-form" hidden><label for="place-label">地点名称</label><div class="label-row"><input id="place-label" maxlength="40" autocomplete="off"><button type="submit">保存</button><button id="cancel-edit" type="button">取消</button></div><p id="label-note" role="status"></p></form>
+      <form id="merge-form" hidden><label for="merge-target">将所选地点合并到</label><div class="label-row"><select id="merge-target" required></select><button type="submit">合并</button><button id="cancel-merge" type="button">取消</button></div></form>
+    </section>
+    <details class="place-method"><summary>统计口径</summary><p>每条轨迹的终点计一次，在约 100 米范围内聚合；同一聚类跨两个公开院区时作候选分组，外边界采用 15 米容差；当前源坐标尚未核对，不能确认人的入院次数。它表示行程结束。含 🏸 的命名地点合计按骑行日去重。自然汇总识别奥森各侧入口停车区域，累计至少 5 分钟的已闭合车辆停放，未确认入口旁的园外停车保留为独立地点、不计入自然累计；未知与短停不计时，不代表人的实际停留。地点卡片保留原停车间隔统计。<span id="place-storage-note">名称保存在正在打开的这台地图服务器上，同一地址的访客会看到同一份名称。地点合并仍保存在此浏览器；已发布合并关系的地图继续使用那份合并。</span></p></details>
+  </aside>
+  <section id="empty" class="empty-state" hidden><h2 id="empty-title">地图数据尚未发布</h2><p id="empty-description">数据就绪后会自动显示，请稍后刷新。</p></section>
+  <div class="map-settings">
+    <button id="fit" aria-label="查看全部路线" disabled>全图</button>
+    <details id="map-options"><summary>图层</summary><div class="settings-content">
+      <h2>地图显示</h2>
+      <label class="check"><span>道路底图</span><input id="basemap" type="checkbox" disabled></label>
+      <label class="check"><span>经过次数</span><input id="show-grid" type="checkbox" disabled></label>
+    </div></details>
+  </div>
+  <section class="map-summary" aria-label="路线统计"><div class="metrics" aria-live="polite"><span id="visible-stat">当前地图 <strong>读取中</strong></span><span id="history-stat">全部历史 <strong>读取中</strong></span></div><div class="route-legend" aria-label="路线叠加，颜色越强表示重复经过越多"><span>路线叠加</span><i></i><i></i><i></i><span>多</span></div></section>
+  <div id="cell-info" class="cell-info" hidden role="status"></div>
+  <div id="error" class="error" role="alert" hidden></div>
+</main>
+<div id="inline-hint" class="inline-hint" role="status" aria-live="polite" hidden></div>
+</body></html>

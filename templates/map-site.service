@@ -1,0 +1,23 @@
+[Unit]
+Description=Along map origin
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/hong/ninebot-map-site
+ExecStart=/usr/bin/python3 /home/ubuntu/hong/ninebot-map-site/code/scripts/serve-public-map.py --root /home/ubuntu/hong/ninebot-map-site/current --assets-root /home/ubuntu/hong/ninebot-map-site/assets --dataset /home/ubuntu/hong/ninebot-map-site/data/dataset.json --port 8766 --updates-config /etc/along-map/update.json --updates-state /var/lib/along-map-update/state.sqlite3
+Environment=PYTHONDONTWRITEBYTECODE=1
+StateDirectory=along-map-update
+StateDirectoryMode=0700
+UMask=0077
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/ubuntu/hong/ninebot-map-site/data
+
+[Install]
+WantedBy=multi-user.target
