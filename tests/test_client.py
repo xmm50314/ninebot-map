@@ -44,6 +44,8 @@ class ProtocolTests(unittest.TestCase):
                 body = json.loads(request.data)
                 if path == api.PATH_PASSPORT_LOGIN:
                     self.assertEqual(body["password"], "synthetic-password")
+                else:
+                    self.assertEqual(sorted(body), ["access_token", "device", "refresh_token"])
                 return Response({"resultCode": "90000", "resultDesc": "success", "data": {
                     "access_token": "synthetic-access", "refresh_token": "synthetic-refresh",
                     "uuid": "synthetic-uuid", "accessTokenValidity": int(time.time() * 1000) + 3600000}})
@@ -87,6 +89,18 @@ class ProtocolTests(unittest.TestCase):
                 self.assertEqual(token_path.stat().st_mode & 0o777, 0o600)
             for path in (Path(d) / "data").rglob("*.json"):
                 self.assertNotIn("synthetic-access", path.read_text(encoding="utf-8"))
+
+    def test_refresh_retries_first_connection_reset(self):
+        import urllib.error
+        fresh = {"access_token": "new", "refresh_token": "r", "accessTokenValidity": str(int(time.time() * 1000) + 3600000)}
+        with tempfile.TemporaryDirectory() as d, patch("nbmap.client.time.sleep"), \
+                patch.object(api, "passport_refresh", side_effect=[urllib.error.URLError(ConnectionResetError()), fresh]) as refresh, \
+                patch.object(api, "business_login", side_effect=lambda tokens, device: tokens.update(business_uid="b")):
+            client = Client(Path(d) / "private", interval=0)
+            client.tokens = {"access_token": "old", "refresh_token": "r", "accessTokenValidity": "0"}
+            client.session()
+            self.assertEqual(refresh.call_count, 2)
+            self.assertEqual(client.tokens["access_token"], "new")
 
     def test_upstream_error_does_not_echo_credentials(self):
         result = safe_error(RuntimeError("server code=123 message=secret-phone secret-token"))
